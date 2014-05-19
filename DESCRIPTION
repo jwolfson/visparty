@@ -1,0 +1,9 @@
+Package: visparty
+Type: Package
+Title: Visualize conditional regression trees
+Version: 1.0
+Date: 2014-05-18
+Author: Julian Wolfson, Ashwini Venkatasubramaniam
+Maintainer: Julian Wolfson <julianw@umn.edu>
+Description: More here
+License: Public
