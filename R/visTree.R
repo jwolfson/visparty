@@ -122,8 +122,11 @@ plot.minmax <- function(My,X,Y) {
   ## Main function which plots the bars for each variable along with a histogram of the outcome
   mymat <- My$M
   my.y <- My$y
-  my.y.val <- as.numeric(strsplit(trim(my.y)," ")[[1]][3])
-  my.y.pct <- ecdf(Y)(my.y.val)
+  
+  if(!is.factor(Y)) {
+    my.y.val <- as.numeric(strsplit(trim(my.y)," ")[[1]][3])
+    my.y.pct <- ecdf(Y)(my.y.val)
+  }
   
   var.nms <- rownames(mymat)
   act.vars <- apply(mymat,1,function(x) { !all(abs(x)==Inf) })
@@ -138,19 +141,30 @@ plot.minmax <- function(My,X,Y) {
   }
   
   ## Create the underlying histogram, but don't plot it yet
-  H <- hist(ecdf(Y)(Y[node.index]),breaks=seq(0,1,by=0.1),plot=FALSE)
-  #D <- density(Y[node.index],bw="SJ")
-  #scale.factor <- max.y/max(D$y)
-  ## Scale the histogram so it fits vertically on the plot.
-  scale.factor <- max.y/max(H$density)
-  ## Set up an empty plot of the correct size
-  plot(NA,xlim=c(0,1),ylim=c(0,max.y),ylab="",xlab="Percentile",main=paste("Mean =",signif(my.y.val,2),", n =",length(node.index)),bty="n",yaxt="n")
-  ## Plot the background histogram
-  barplot(scale.factor*H$density,width=0.1,col=rgb(0,0,0,0.05),border=rgb(0,0,0,0.1),add=TRUE,space=0,yaxt="n")
-  ## Draw in a line for the mean
-  mu.Y <- mean(Y[node.index])
-  print(mean(Y[node.index]))
-  segments(ecdf(Y)(mu.Y),0,ecdf(Y)(mu.Y),max.y,col=rgb(0,0,0,0.5),lwd=2)
+  if(is.factor(Y)) {
+   wdth <- 1/length(levels(Y))
+    H <- hist(as.integer(Y[node.index])/length(levels(Y)),breaks=seq(0,1,length.out=length(levels(Y))+1),plot=FALSE)
+   ## Scale the histogram so it fits vertically on the plot.
+   scale.factor <- max.y/max(H$density)
+   ## Set up an empty plot of the correct size
+   plot(NA,xlim=c(0,1),ylim=c(0,max.y),ylab="",xlab="Percentile",main=paste("Mode =",names(which.max(table(Y[node.index]))),", n =",length(node.index)),bty="n",yaxt="n")
+   ## Plot the background histogram
+    barplot(scale.factor*H$density,width=wdth,col=rgb(0,0,0,0.05),border=rgb(0,0,0,0.1),add=TRUE,space=0,yaxt="n")
+   ## Add the category labels
+   text(seq(wdth/2,1-wdth/2,by=wdth),rep(0,length(levels(Y))),levels(Y),pos=3,adj=0.5,cex=1,col=gray(0.5))
+  }
+  else{
+    H <- hist(ecdf(Y)(Y[node.index]),breaks=seq(0,1,by=0.1),plot=FALSE)
+    ## Scale the histogram so it fits vertically on the plot.
+    scale.factor <- max.y/max(H$density)
+    ## Set up an empty plot of the correct size
+    plot(NA,xlim=c(0,1),ylim=c(0,max.y),ylab="",xlab="Percentile",main=paste("Mean =",signif(my.y.val,2),", n =",length(node.index)),bty="n",yaxt="n")
+    ## Plot the background histogram
+    barplot(scale.factor*H$density,width=0.1,col=rgb(0,0,0,0.05),border=rgb(0,0,0,0.1),add=TRUE,space=0,yaxt="n")
+    ## Draw in a line for the mean
+    mu.Y <- mean(Y[node.index])
+    segments(ecdf(Y)(mu.Y),0,ecdf(Y)(mu.Y),max.y,col=rgb(0,0,0,0.5),lwd=2)    
+  }
   
   ## Now plot the horizontal bars corresponding to each variable.
   j <- 1
@@ -170,7 +184,31 @@ visTree <- function(cond.tree,rng=NULL) {
   ## 'range' parameter can restrict plotting to a particular set of nodes
   splittree<-list_node(cond.tree)
   structure<-strsplit(splittree, split=";")
+  if(is.factor(Y)) {
+    n.terminals <- length(structure[[1]])
+    prob.mat <- matrix(data=unlist(lapply(structure,function(S) {
+      
+      unlist(lapply(strsplit(S,","),function(split.S) {
+        seg <- split.S[length(split.S)]
+        as.numeric(trim(strsplit(seg,"=")[[1]][2]))
+      })) 
+      })), nrow=n.terminals)
+    
+    y.list <- lapply(1:nrow(prob.mat),function(j) {
+      paste0("y=",paste0(prob.mat[j,],collapse="|"))
+    })
+
+    x.list <- sapply(structure[[1]],function(s.row) {
+      seg <- strsplit(s.row,",")[[1]]
+      paste0(seg[-length(seg)],collapse=",")
+    })
+    
+    structure <- lapply(1:length(y.list),function(i) {
+      paste0(x.list[[i]],", ",y.list[[i]])
+    })
+  }
   if(length(unlist(structure))==1) { stop("Tree has only a single node; nothing to visualize.") }
+
   n.terminals <- ifelse(is.null(rng),length(unlist(structure)),length(rng))
   if(is.null(rng)) { 
     index <- 1:n.terminals } else { 
@@ -178,5 +216,15 @@ visTree <- function(cond.tree,rng=NULL) {
   par(mfrow=c(2,ceiling(length(index)/2)),mar=c(2,1,3,1))
   X <- data.frame(cond.tree@data@get("input"))
   Y <- (cond.tree@data@get("response"))[,1]
+  
   sapply(unlist(structure)[index],function(S) { plot.minmax(minmax.mat(S,colnames(X)),X,Y)})
+}
+
+testing <- function() {
+  X1 <- rnorm(100)
+  X2 <- rnorm(100)
+  Y <- cut(rnorm(100,mean=X1+X2,sd=1),4)
+  
+  cond.tree <- party::ctree(Y~X1+X2)
+  visTree(cond.tree)
 }
