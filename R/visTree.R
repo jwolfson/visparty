@@ -184,6 +184,9 @@ visTree <- function(cond.tree,rng=NULL) {
   ## 'range' parameter can restrict plotting to a particular set of nodes
   splittree<-list_node(cond.tree)
   structure<-strsplit(splittree, split=";")
+  X <- data.frame(cond.tree@data@get("input"))
+  Y <- (cond.tree@data@get("response"))[,1]
+  
   if(is.factor(Y)) {
     n.terminals <- length(structure[[1]])
     prob.mat <- matrix(data=unlist(lapply(structure,function(S) {
@@ -214,8 +217,6 @@ visTree <- function(cond.tree,rng=NULL) {
     index <- 1:n.terminals } else { 
     index <- min(rng):min(max(rng),length(unlist(structure))) } ## Should probably do some range checking
   par(mfrow=c(2,ceiling(length(index)/2)),mar=c(2,1,3,1))
-  X <- data.frame(cond.tree@data@get("input"))
-  Y <- (cond.tree@data@get("response"))[,1]
   
   sapply(unlist(structure)[index],function(S) { plot.minmax(minmax.mat(S,colnames(X)),X,Y)})
 }
