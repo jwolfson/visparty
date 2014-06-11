@@ -1,15 +1,15 @@
 
-#gets node ID for all the left splits
+#Gets node ID for all the left splits
 ptree_left <- function(newtree, start_id){
   nodes(newtree, start_id)[[1]]$left$nodeID
 }
 
-# gets node ID for all the right splits
+#Gets node ID for all the right splits
 ptree_right <- function(newtree, start_id){
   nodes(newtree, start_id)[[1]]$right$nodeID
 }
 
-# get prediction for the relevant node
+# Get prediction for the relevant node
 ptree_y <- function(newtree, node_id) {
   # Picks out the prediction from the ctree structure
   p <- nodes(newtree, node_id)[[1]]$prediction
